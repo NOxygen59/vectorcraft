@@ -1,7 +1,7 @@
 //! Desktop printer transport. VectorCraft composes every page and copy before submission;
 //! craft-print owns discovery and spooling. Windows 7 keeps its viewer-based transport because
 //! Windows.Data.Pdf is unavailable there.
-#[cfg(not(all(windows, any(feature = "windows7", target_vendor = "win7"))))]
+#[cfg(not(any(target_os = "ios", all(windows, any(feature = "windows7", target_vendor = "win7")))))]
 use std::process::Command;
 use vectorcraft_ui_egui::print::{PrintJob, PrintService, Printer};
 
@@ -31,7 +31,22 @@ impl PrintService for SystemPrint {
     }
 }
 
-#[cfg(not(all(windows, any(feature = "windows7", target_vendor = "win7"))))]
+/// iPadOS: no printer transport yet; File › Export as PDF, then print it from the Files app.
+#[cfg(target_os = "ios")]
+mod system {
+    use super::*;
+    pub fn printers() -> Vec<Printer> {
+        Vec::new()
+    }
+    pub fn print(_job: &PrintJob) -> Result<String, String> {
+        Err("Printing isn't available on iPad yet: export a PDF and print it from the Files app".into())
+    }
+    pub fn setup(_printer: Option<&str>) -> Result<(), String> {
+        Err("Printing isn't available on iPad yet".into())
+    }
+}
+
+#[cfg(not(any(target_os = "ios", all(windows, any(feature = "windows7", target_vendor = "win7")))))]
 mod system {
     use super::*;
     pub fn printers() -> Vec<Printer> {

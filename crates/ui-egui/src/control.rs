@@ -188,7 +188,7 @@ fn key_from(name: &str) -> Option<egui::Key> {
 /// macOS, Ctrl elsewhere).
 fn modifiers(p: &Value) -> egui::Modifiers {
     let b = |n: &str| p.get(n).and_then(Value::as_bool).unwrap_or(false);
-    egui::Modifiers { alt: b("alt"), ctrl: b("ctrl"), shift: b("shift"), mac_cmd: b("cmd") && cfg!(target_os = "macos"), command: b("cmd") }
+    egui::Modifiers { alt: b("alt"), ctrl: b("ctrl"), shift: b("shift"), mac_cmd: b("cmd") && cfg!(any(target_os = "macos", target_os = "ios")), command: b("cmd") }
 }
 
 pub fn handle(app: &mut VectorcraftApp, ctx: &egui::Context, req: &ControlRequest) -> Outcome {

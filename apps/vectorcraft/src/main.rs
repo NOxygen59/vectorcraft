@@ -29,6 +29,8 @@ mod compositor_gpu;
 mod control_server;
 #[cfg(feature = "wgpu")]
 mod gpu;
+#[cfg(target_os = "ios")]
+mod ios;
 mod logging;
 #[cfg(target_os = "macos")]
 mod mac_fonts;
@@ -283,6 +285,7 @@ fn save_prefs(app: &VectorcraftApp) {
 type Parent = Option<std::sync::Arc<winit::window::Window>>;
 
 /// What rfd's blocking and asynchronous file dialogs are both set up with.
+#[cfg(not(target_os = "ios"))]
 trait DialogSettings: Sized {
     fn parent(self, window: &winit::window::Window) -> Self;
     fn title(self, title: &str) -> Self;
@@ -291,6 +294,7 @@ trait DialogSettings: Sized {
     fn file_name(self, name: &str) -> Self;
 }
 
+#[cfg(not(target_os = "ios"))]
 macro_rules! dialog_settings {
     ($($dialog:ty),*) => {$(
         impl DialogSettings for $dialog {
@@ -313,9 +317,11 @@ macro_rules! dialog_settings {
     )*};
 }
 
+#[cfg(not(target_os = "ios"))]
 dialog_settings!(rfd::FileDialog, rfd::AsyncFileDialog);
 
 /// `d` set up for `request`: its title, file types, folder and suggested name.
+#[cfg(not(target_os = "ios"))]
 fn dialog_for<D: DialogSettings>(d: D, request: &PickRequest) -> D {
     let pick = match request {
         PickRequest::Open(pick) | PickRequest::Save(pick) => pick,
@@ -339,7 +345,7 @@ fn dialog_for<D: DialogSettings>(d: D, request: &PickRequest) -> D {
 
 /// A native file dialog for `request` over `parent` (on Linux the portal then shows it over the
 /// window and keeps it in front).
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", target_os = "ios")))]
 fn file_dialog(request: &PickRequest, parent: &Parent) -> rfd::FileDialog {
     match parent {
         Some(w) => dialog_for(rfd::FileDialog::new().parent(w), request),
@@ -355,7 +361,7 @@ fn make_folder(request: &PickRequest) {
 }
 
 /// Show `dialog` for `request` (on the calling thread, until it closes) → the paths picked.
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", target_os = "ios")))]
 fn show_dialog(dialog: rfd::FileDialog, request: &PickRequest) -> Vec<String> {
     make_folder(request);
     let paths = match request {
@@ -368,7 +374,7 @@ fn show_dialog(dialog: rfd::FileDialog, request: &PickRequest) -> Vec<String> {
 }
 
 /// Show the dialog for `request` over `parent` now → the paths picked.
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", target_os = "ios")))]
 fn pick_now(request: PickRequest, parent: &Parent) -> Vec<String> {
     show_dialog(file_dialog(&request, parent), &request)
 }
@@ -380,6 +386,20 @@ fn pick_now(request: PickRequest, parent: &Parent) -> Vec<String> {
 fn pick_now(request: PickRequest, _parent: &Parent) -> Vec<String> {
     log::error!("no file dialog shown for {request:?}: macOS shows them as sheets, from commands, dialogs' OK and buttons only");
     Vec::new()
+}
+
+/// iPadOS shows the document picker only as a sheet over the window ([`start_pick`]).
+#[cfg(target_os = "ios")]
+fn pick_now(request: PickRequest, _parent: &Parent) -> Vec<String> {
+    log::error!("no document picker shown for {request:?}: iPadOS shows it over the window, from commands, dialogs' OK and buttons only");
+    Vec::new()
+}
+
+/// iPadOS: the Files app's document picker over the window, answering on the receiver.
+#[cfg(target_os = "ios")]
+fn start_pick(request: PickRequest, parent: &Parent, ui: &egui::Context) -> Option<std::sync::mpsc::Receiver<Vec<String>>> {
+    make_folder(&request);
+    ios::start_pick(request, parent, ui)
 }
 
 /// File → Show in Folder: select `path` in Finder / Explorer, or open its folder elsewhere.
@@ -420,7 +440,7 @@ fn write_file(path: &str, bytes: &[u8]) -> Result<(), String> {
 /// Linux: show the dialog for `request` over `parent` on a thread of its own, answering on the
 /// receiver. Shown on the UI thread, nothing would answer the compositor meanwhile, which then
 /// offers to kill the window as not responding (#592).
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", target_os = "ios")))]
 fn start_pick(request: PickRequest, parent: &Parent, ui: &egui::Context) -> Option<std::sync::mpsc::Receiver<Vec<String>>> {
     let dialog = file_dialog(&request, parent);
     let (tx, rx) = std::sync::mpsc::channel();
@@ -775,6 +795,12 @@ fn main() -> std::process::ExitCode {
                 let mut descriptor = device(adapter);
                 let limit = &mut descriptor.required_limits.max_texture_dimension_2d;
                 *limit = gpu::surface_limit(*limit, adapter.limits().max_texture_dimension_2d);
+                // iPadOS: ask no more than the GPU offers (the iOS Simulator's has fewer inter-stage
+                // shader variables than wgpu's defaults, and its device request fails otherwise).
+                #[cfg(target_os = "ios")]
+                {
+                    descriptor.required_limits = descriptor.required_limits.clone().or_worse_values_from(&adapter.limits());
+                }
                 descriptor
             });
         }

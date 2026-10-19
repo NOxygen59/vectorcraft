@@ -1,3 +1,38 @@
+> [!WARNING]
+> **Projet personnel « vibecodé ».** Tout le code de ce dépôt (ou, pour un fork, toutes les modifications) a été écrit par **Claude** (Anthropic, via Claude Code), à la demande spécifique de [@NOxygen59](https://github.com/NOxygen59), pour **son appareil précis** :
+>
+> **iPad Pro 12,9" 5ᵉ génération (puce M1) — 512 Go de stockage, 8 Go de RAM — iOS 16.6.1, jailbreak Dopamine (rootless) + TrollStore.**
+>
+> Rien n'est testé ni prévu pour un autre appareil. Pas de support, pas de feuille de route : c'est un dépôt d'archive personnel, publié pour pouvoir reprendre le travail plus tard (modifications, mises à jour).
+
+**Fork** de [storytold/vectorcraft](https://github.com/storytold/vectorcraft) (base : commit `5a120e3`, version 0.10.0), porté sur **iPad / iOS 16** (`.tipa` pour TrollStore). Toutes les modifications sont sur la branche `ipad-ios16`.
+
+**Licence :** celle d'origine, MIT ou Apache-2.0 au choix (voir [LICENSE-MIT](LICENSE-MIT) et [LICENSE-APACHE](LICENSE-APACHE)). Elle couvre aussi les modifications. Aucune licence n'est ajoutée.
+
+### Modifications pour iPad
+- **iOS** :
+  - fichiers par UIDocumentPicker et presse-papiers UIPasteboard (`apps/vectorcraft/src/ios.rs`, `clipboard.rs`) ;
+  - préférences dans Library/Application Support ;
+  - polices du système et de Documents/Fonts ;
+  - impression désactivée ;
+  - rfd, arboard, craft-print, Wayland et X11 exclus d'iOS.
+- **`vendor/winit`** (0.30.13 patché, détail dans [vendor/winit/IOS-CHANGES.md](vendor/winit/IOS-CHANGES.md)) :
+  - clavier physique avec répétition des touches ;
+  - trackpad : survol, défilement, pincement ;
+  - pointeur système masqué ;
+  - zones cliquables justes en fenêtré (tweak Aerial, Stage Manager).
+- **Gestes, d'après Apple TouchCanvas et Procreate** :
+  - zoom et déplacement à deux doigts ;
+  - tap à deux doigts = annuler, à trois = rétablir ;
+  - rejet de la paume par iPadOS.
+- **`vendor/egui-winit`** : ⌘ = Commande, et une touche annulée relâche le bouton.
+- **`ui-egui`** : raccourcis affichés avec ⌘ comme sur Mac, curseurs dessinés.
+- **Build** : `packaging/ios/` (`.tipa`, iOS 16.0 minimum).
+
+**Builds :** voir les [Releases](https://github.com/NOxygen59/vectorcraft/releases).
+
+---
+
 <p align="center">
   <a href="https://getartcraft.com/">
     <picture>

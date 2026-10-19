@@ -88,6 +88,13 @@ arboard = { version = "3.6", default-features = false }
 clipboard-win = "5.4"
 webbrowser = "1"
 
+# iPadOS: winit 0.30 and egui-winit with hardware keyboard (shortcuts, ⌘ as Command) and
+# trackpad/mouse support (hover, right click, scroll, pinch, cursor hiding). The changes only touch
+# winit's iOS backend and egui-winit's macOS-or-iOS checks; see vendor/winit/IOS-CHANGES.md.
+[patch.crates-io]
+winit = { path = "vendor/winit" }
+egui-winit = { path = "vendor/egui-winit" }
+
 [workspace.lints.rust]
 unsafe_code = "deny"
 

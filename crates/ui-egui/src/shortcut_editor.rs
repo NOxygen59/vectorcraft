@@ -189,7 +189,7 @@ pub fn format(sc: &KeyboardShortcut) -> String {
     if m.command || m.mac_cmd {
         s.push_str("Cmd+");
     }
-    if m.ctrl && (cfg!(target_os = "macos") || !m.command) {
+    if m.ctrl && (cfg!(any(target_os = "macos", target_os = "ios")) || !m.command) {
         s.push_str("Ctrl+");
     }
     if m.alt {

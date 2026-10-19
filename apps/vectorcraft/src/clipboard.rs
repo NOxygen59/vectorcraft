@@ -23,7 +23,9 @@ use vectorcraft_ui_egui::SystemClipboard;
 pub fn system_clipboard() -> Box<dyn SystemClipboard> {
     #[cfg(windows)]
     let cb = Box::<win::Clipboard>::default();
-    #[cfg(not(windows))]
+    #[cfg(target_os = "ios")]
+    let cb = Box::<ios::Pasteboard>::default();
+    #[cfg(not(any(windows, target_os = "ios")))]
     let cb = Box::<portable::Clipboard>::default();
     cb
 }
@@ -45,7 +47,7 @@ fn windows_formats(mime: &str) -> &'static [&'static str] {
 /// the MIME type of its data. They are the system's uniform type identifiers (the values of
 /// `NSPasteboardTypePDF`, `NSPasteboardTypePNG` and `NSPasteboardTypeTIFF` among them) and the
 /// older name some apps still give PDF. Text is read through arboard.
-#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+#[cfg_attr(not(any(target_os = "macos", target_os = "ios")), allow(dead_code))]
 fn pasteboard_types(mime: &str) -> &'static [(&'static str, &'static str)] {
     match mime {
         SVG => &[("public.svg-image", SVG)],
@@ -64,11 +66,13 @@ fn text_of(flavours: &[Flavour]) -> Option<String> {
 /// Most pixels a side of a bitmap another app put on the clipboard (untrusted data).
 const MAX_SIDE: u32 = 32_768;
 
+#[cfg_attr(target_os = "ios", allow(dead_code))]
 fn decode_png(png: &[u8]) -> Option<image::RgbaImage> {
     Some(image::load_from_memory_with_format(png, image::ImageFormat::Png).ok()?.to_rgba8())
 }
 
 /// `img` as a PNG flavour.
+#[cfg_attr(target_os = "ios", allow(dead_code))]
 fn png_flavour(img: &image::RgbaImage) -> Option<Flavour> {
     let mut data = vec![];
     img.write_to(&mut Cursor::new(&mut data), image::ImageFormat::Png).ok()?;
@@ -136,6 +140,7 @@ fn dib_image(dib: &[u8]) -> Option<image::RgbaImage> {
 
 /// The first of `paths` (files copied in a file manager) that pastes as one of `mimes`, read
 /// whole. Only its first bytes are read to tell, so other files cost little.
+#[cfg_attr(target_os = "ios", allow(dead_code))]
 fn copied_file(paths: Vec<PathBuf>, mimes: &[&'static str]) -> Option<Flavour> {
     paths.into_iter().find_map(|path| {
         // text/uri-list lines end in CRLF (RFC 2483), but arboard splits them on LF only.
@@ -297,7 +302,9 @@ mod win {
     }
 }
 
-/// arboard: one format at a time. Built everywhere so it is checked everywhere.
+/// arboard: one format at a time. Built everywhere but iPadOS (no arboard there) so it is checked
+/// everywhere.
+#[cfg(not(target_os = "ios"))]
 #[cfg_attr(windows, allow(dead_code))]
 mod portable {
     use std::borrow::Cow;
@@ -426,6 +433,71 @@ mod mac {
                 (!data.is_empty()).then_some(Flavour { mime, data })
             })
         })
+    }
+}
+
+/// iPadOS: UIPasteboard, one format at a time as with arboard (the text, else the PNG); Paste reads
+/// text and the pasteboard's SVG, PDF, EPS, PNG and TIFF ([`pasteboard_types`]).
+///
+/// Some UIPasteboard accessors are marked unsafe in objc2, hence the scoped `unsafe_code` allowance.
+#[cfg(target_os = "ios")]
+#[allow(unsafe_code)]
+mod ios {
+    use objc2::rc::autoreleasepool;
+    use objc2_foundation::{NSArray, NSData, NSString};
+    use objc2_ui_kit::UIPasteboard;
+
+    use super::*;
+
+    #[derive(Default)]
+    pub struct Pasteboard {
+        /// The pasteboard's change count right after our last write.
+        written: Option<isize>,
+    }
+
+    impl SystemClipboard for Pasteboard {
+        fn write(&mut self, flavours: &[Flavour]) -> Result<(), String> {
+            autoreleasepool(|_| {
+                let pb = UIPasteboard::generalPasteboard();
+                match (text_of(flavours), flavours.iter().find(|f| f.mime == PNG)) {
+                    (Some(t), _) => unsafe { pb.setString(Some(&NSString::from_str(&t))) },
+                    (None, Some(png)) => pb.setData_forPasteboardType(&NSData::with_bytes(&png.data), &NSString::from_str("public.png")),
+                    (None, None) => unsafe { pb.setItems(&NSArray::new()) },
+                }
+                self.written = Some(unsafe { pb.changeCount() });
+            });
+            Ok(())
+        }
+
+        fn holds_ours(&mut self) -> bool {
+            self.written.is_some_and(|n| n == unsafe { UIPasteboard::generalPasteboard().changeCount() })
+        }
+
+        fn read(&mut self, mimes: &[&'static str]) -> Option<Flavour> {
+            autoreleasepool(|_| {
+                let pb = UIPasteboard::generalPasteboard();
+                mimes.iter().find_map(|m| match *m {
+                    TEXT => unsafe { pb.string() }.map(|s| s.to_string()).filter(|t| !t.is_empty()).map(|t| Flavour { mime: TEXT, data: t.into_bytes() }),
+                    m => pasteboard_types(m).iter().find_map(|&(t, mime)| {
+                        let data = pb.dataForPasteboardType(&NSString::from_str(t))?.to_vec();
+                        (!data.is_empty()).then_some(Flavour { mime, data })
+                    }),
+                })
+            })
+        }
+
+        /// Asks for the pasteboard's types only.
+        fn has(&mut self, mimes: &[&'static str]) -> bool {
+            autoreleasepool(|_| {
+                let pb = UIPasteboard::generalPasteboard();
+                if mimes.contains(&TEXT) && unsafe { pb.hasStrings() } {
+                    return true;
+                }
+                let types: Vec<_> = mimes.iter().flat_map(|m| pasteboard_types(m)).map(|(t, _)| NSString::from_str(t)).collect();
+                let types: Vec<&NSString> = types.iter().map(|t| &**t).collect();
+                !types.is_empty() && pb.containsPasteboardTypes(&NSArray::from_slice(&types))
+            })
+        }
     }
 }
 

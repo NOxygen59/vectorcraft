@@ -3279,12 +3279,12 @@ pub fn invoke(app: &mut VectorcraftApp, id: &str, p: Value) {
     }
 }
 
-/// `Cmd+Shift+]` → `⇧⌘]` on macOS, `Ctrl+Shift+]` elsewhere.
+/// `Cmd+Shift+]` → `⇧⌘]` on macOS and iPadOS, `Ctrl+Shift+]` elsewhere.
 pub fn pretty_shortcut(s: &str) -> String {
     if s.is_empty() {
         return String::new();
     }
-    if cfg!(target_os = "macos") {
+    if cfg!(any(target_os = "macos", target_os = "ios")) {
         let mut mods = String::new();
         let parts: Vec<&str> = s.split('+').collect();
         let (key, ms): (&str, &[&str]) = if s.ends_with("++") {

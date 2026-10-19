@@ -1278,6 +1278,13 @@ pub fn system_font_dirs() -> Vec<PathBuf> {
                 dirs.push(e.path());
             }
         }
+    } else if cfg!(target_os = "ios") {
+        // iPadOS: the system's fonts (Core, CoreAddition, LanguageSupport…, read-only but readable
+        // from the app's sandbox) and fonts dropped in the app's own Documents/Fonts in Files.
+        dirs.push("/System/Library/Fonts".into());
+        if let Some(h) = &home {
+            dirs.push(h.join("Documents/Fonts"));
+        }
     } else if cfg!(windows) {
         let root = std::env::var_os("WINDIR").map(PathBuf::from).unwrap_or_else(|| "C:\\Windows".into());
         dirs.push(root.join("Fonts"));
