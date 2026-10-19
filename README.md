@@ -29,6 +29,14 @@
 - **`ui-egui`** : raccourcis affichés avec ⌘ comme sur Mac, curseurs dessinés.
 - **Build** : `packaging/ios/` (`.tipa`, iOS 16.0 minimum).
 
+### Versions
+
+Ce fork a sa propre numérotation, « VectorCraft iPad », en parallèle de celle de VectorCraft officiel :
+
+| VectorCraft iPad | Basé sur VectorCraft | Release | Contenu |
+|---|---|---|---|
+| 1.0 | 0.10.0 | [v0.10.0-ios16](https://github.com/NOxygen59/vectorcraft/releases/tag/v0.10.0-ios16) | Portage iPad, gestes (zoom, annuler/rétablir), rejet de la paume, Aerial |
+
 **Builds :** voir les [Releases](https://github.com/NOxygen59/vectorcraft/releases).
 
 ---
