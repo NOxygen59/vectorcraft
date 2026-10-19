@@ -26,6 +26,9 @@
   - tap à deux doigts = annuler, à trois = rétablir ;
   - rejet de la paume par iPadOS.
 - **`vendor/egui-winit`** : ⌘ = Commande, et une touche annulée relâche le bouton.
+- **Économie d'énergie** : le rendu est plafonné à 60 images par seconde (au lieu de 120 sur un écran ProMotion), ce qui divise par deux le travail pendant le dessin. Un bouton **60 Hz / 120 Hz** dans la barre du haut bascule à la volée, et le choix est gardé (`vendor/winit`, `frame_gate`).
+- **Indicateur de ressources** : à gauche de Discord, la RAM et le CPU utilisés par VectorCraft lui-même, plus le niveau de batterie de l'iPad (`crates/ui-egui/src/resource_readout.rs`). Mis à jour toutes les 2 secondes, et il se réduit dans une fenêtre étroite.
+- **Barre du haut** : plus de boutons réduire / agrandir / fermer façon Windows, inutiles sur iPad.
 - **`ui-egui`** : raccourcis affichés avec ⌘ comme sur Mac, curseurs dessinés.
 - **Build** : `packaging/ios/` (`.tipa`, iOS 16.0 minimum).
 
@@ -35,6 +38,7 @@ Ce fork a sa propre numérotation, « VectorCraft iPad », en parallèle de cell
 
 | VectorCraft iPad | Basé sur VectorCraft | Release | Contenu |
 |---|---|---|---|
+| 1.1 | 0.10.0 | [v0.10.0-ios16.1](https://github.com/NOxygen59/vectorcraft/releases/tag/v0.10.0-ios16.1) | 60 Hz par défaut, bouton 60/120 Hz, indicateur RAM / CPU / batterie, plus de boutons façon Windows |
 | 1.0 | 0.10.0 | [v0.10.0-ios16](https://github.com/NOxygen59/vectorcraft/releases/tag/v0.10.0-ios16) | Portage iPad, gestes (zoom, annuler/rétablir), rejet de la paume, Aerial |
 
 **Builds :** voir les [Releases](https://github.com/NOxygen59/vectorcraft/releases).

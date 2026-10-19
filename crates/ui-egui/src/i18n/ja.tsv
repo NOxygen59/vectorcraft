@@ -4334,3 +4334,10 @@ lighting	Light	ライト
 	Softness	柔らかさ
 	Ambient Light	環境光
 	Light behind the object	オブジェクトの背後のライト
+	RAM	メモリ
+	CPU	CPU
+	Battery	バッテリー
+	{n} MB	{n} MB
+	{n} GB	{n} GB
+	Maximum frame rate: 60 Hz saves battery and heat, 120 Hz is smoother. Tap to switch.	最大フレームレート：60 Hz はバッテリーを節約し発熱を抑えます。120 Hz はより滑らかです。タップで切り替え。
+	Memory and processor used by VectorCraft itself, and the battery level. Updated every 2 seconds.	VectorCraft 自体が使用しているメモリとプロセッサ、およびバッテリー残量。2 秒ごとに更新。

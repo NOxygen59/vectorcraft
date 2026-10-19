@@ -19,6 +19,7 @@ pub mod canvas;
 pub mod chrome;
 mod clipboard_probe;
 pub mod community;
+pub mod resource_readout;
 pub mod control;
 pub mod credits;
 pub mod cursors;
@@ -198,9 +199,26 @@ pub type OpenUrlFn = Box<dyn FnMut(&str)>;
 /// Shows a file in the system file manager, or opens it in its app.
 pub type RevealFn = Box<dyn FnMut(&str) -> Result<(), String>>;
 
+/// A reading of what the app uses, for the header's readout ([`Services::resources`]).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct ResourceReading {
+    /// The app's memory footprint in bytes.
+    pub memory_bytes: u64,
+    /// The app's share of all CPU cores, 0–100.
+    pub cpu_percent: f32,
+    /// The device's battery level, 0–100, when known.
+    pub battery_percent: Option<f32>,
+    pub charging: bool,
+}
+
 /// Platform services injected by the host app (desktop or web).
 #[derive(Default)]
 pub struct Services {
+    /// What the app itself uses (memory, CPU) and the battery level, shown in the header next
+    /// to Discord (iPad). Read every two seconds.
+    pub resources: Option<fn() -> ResourceReading>,
+    /// Caps redraws per second (60 or 120 on a ProMotion iPad), switched from the header.
+    pub set_max_frame_rate: Option<fn(u32)>,
     /// Show an open dialog; returns a path.
     pub pick_open: Option<PickOpen>,
     /// Show a save dialog (suggested name, folder, file types); returns a path.

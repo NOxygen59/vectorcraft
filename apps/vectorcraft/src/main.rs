@@ -557,6 +557,12 @@ fn services(parent: Parent, ui: egui::Context) -> Services {
         pick_folder: Some(Box::new(move || pick_now(PickRequest::Folder, &p4).into_iter().next())),
         // File → Print: the system's printers and print queue.
         print: Some(Box::new(printing::SystemPrint)),
+        // iPad: the header's RAM / CPU / battery readout and its 60 / 120 Hz switch (winit's
+        // frame gate, vendor/winit).
+        #[cfg(target_os = "ios")]
+        resources: Some(ios::resources),
+        #[cfg(target_os = "ios")]
+        set_max_frame_rate: Some(winit::platform::ios::set_max_frame_rate),
         ..Default::default()
     }
 }
@@ -609,8 +615,9 @@ fn adapter_summary(info: &eframe::wgpu::AdapterInfo) -> String {
 }
 
 /// Windows and Linux: no OS title bar; the app bar is the title bar (`vectorcraft_ui_egui::titlebar`).
-/// macOS keeps its traffic lights over the integrated title strip.
-const CUSTOM_TITLEBAR: bool = !cfg!(target_os = "macos");
+/// macOS keeps its traffic lights over the integrated title strip; iPadOS windows can't be
+/// minimized, maximized or closed by the app: no Windows-style caption buttons there either.
+const CUSTOM_TITLEBAR: bool = !cfg!(any(target_os = "macos", target_os = "ios"));
 
 /// Whether this start draws its own title bar: Windows and Linux do, unless Preferences ›
 /// User Interface › System Title Bar asks for the system's. Read from the saved preferences

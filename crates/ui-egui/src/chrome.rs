@@ -91,6 +91,10 @@ pub fn app_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
                 ui.add_space(10.0);
                 crate::community::discord_button(app, ui, false);
             }
+            // iPad: what VectorCraft uses, and the 60 / 120 Hz switch, left of Discord.
+            if discord {
+                crate::resource_readout::show(app, ui, &t);
+            }
             if app.services.native_menu.is_some() {
                 let title = ui.painter().layout_no_wrap("VectorCraft".into(), egui::FontId::proportional(13.5), t.text);
                 let title_rect = egui::Rect::from_center_size(full.center(), title.size());

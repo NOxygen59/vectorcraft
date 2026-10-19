@@ -78,8 +78,10 @@ pollster = "1"
 # for Copy and Paste. The same objc2 family as the macOS code above.
 objc2 = "0.6"
 objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSData", "NSDictionary", "NSObject", "NSString", "NSURL"] }
-objc2-ui-kit = { version = "0.3", default-features = false, features = ["std", "block2", "objc2-uniform-type-identifiers", "UIDocumentPickerViewController", "UIPasteboard", "UIResponder", "UIView", "UIViewController", "UIWindow"] }
+objc2-ui-kit = { version = "0.3", default-features = false, features = ["std", "block2", "objc2-uniform-type-identifiers", "UIDevice", "UIDocumentPickerViewController", "UIPasteboard", "UIResponder", "UIView", "UIViewController", "UIWindow"] }
 objc2-uniform-type-identifiers = { version = "0.3", default-features = false, features = ["std", "UTType", "UTCoreTypes"] }
+# The memory and CPU the app uses (proc_pid_rusage, getrusage), for the header readout.
+libc = "0.2"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 eframe = { workspace = true, features = ["wayland", "x11"] }

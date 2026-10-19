@@ -147,3 +147,47 @@ pub fn start_pick(request: PickRequest, parent: &Parent, ui: &egui::Context) -> 
     presenter.presentViewController_animated_completion(&picker, true, None);
     Some(rx)
 }
+
+/// The memory and CPU VectorCraft uses, and the battery level, for the header readout. Cheap
+/// (two system calls and two UIDevice properties); the CPU share is measured since the previous
+/// call. The battery needs the main thread (unknown off it).
+pub fn resources() -> vectorcraft_ui_egui::ResourceReading {
+    use std::sync::Mutex;
+    use std::time::Instant;
+    static LAST: Mutex<Option<(Instant, f64)>> = Mutex::new(None);
+
+    let mut out = vectorcraft_ui_egui::ResourceReading::default();
+    // The footprint is what Xcode's memory gauge and iPadOS's memory limit use.
+    let mut info: libc::rusage_info_v2 = unsafe { std::mem::zeroed() };
+    if unsafe { libc::proc_pid_rusage(libc::getpid(), libc::RUSAGE_INFO_V2, (&raw mut info).cast()) } == 0 {
+        out.memory_bytes = info.ri_phys_footprint;
+    }
+    let mut usage: libc::rusage = unsafe { std::mem::zeroed() };
+    if unsafe { libc::getrusage(libc::RUSAGE_SELF, &raw mut usage) } == 0 {
+        let secs = |t: libc::timeval| t.tv_sec as f64 + f64::from(t.tv_usec) / 1e6;
+        let cpu = secs(usage.ru_utime) + secs(usage.ru_stime);
+        let now = Instant::now();
+        let mut last = LAST.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        if let Some((then, before)) = *last {
+            let wall = now.duration_since(then).as_secs_f64();
+            let cores = std::thread::available_parallelism().map_or(1, std::num::NonZero::get) as f64;
+            if wall > 0.0 {
+                out.cpu_percent = ((cpu - before) / wall / cores * 100.0).clamp(0.0, 100.0) as f32;
+            }
+        }
+        *last = Some((now, cpu));
+    }
+    if let Some(mtm) = MainThreadMarker::new() {
+        let device = objc2_ui_kit::UIDevice::currentDevice(mtm);
+        if !device.isBatteryMonitoringEnabled() {
+            device.setBatteryMonitoringEnabled(true);
+        }
+        let level = device.batteryLevel();
+        if level >= 0.0 {
+            out.battery_percent = Some(level * 100.0);
+        }
+        let state = device.batteryState();
+        out.charging = state == objc2_ui_kit::UIDeviceBatteryState::Charging || state == objc2_ui_kit::UIDeviceBatteryState::Full;
+    }
+    out
+}
